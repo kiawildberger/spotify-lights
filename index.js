@@ -17,36 +17,42 @@ async function getAccessToken() {
             grant_type: 'refresh_token',
             refresh_token,
         }),
-    })
+    }).catch(err => console.log("bones > "+err))
     return resp.json()
 }
 async function getCurrent() {
     const {access_token} = await getAccessToken()
 
-    const resp = await fetch(`${current_url}`, {
+    const re = await fetch(`${current_url}`, {
         headers: {
             Authorization: `Bearer ${access_token}`,
         },
-    })
+    }).catch(err => console.log("shit > "+err))
 
-    await resp.json().then(j => {
-        fetch(j.item.album.images[0].url).then(res => {
-            let writer = fs.createWriteStream("./playing.jpg")
-            res.body.pipe(writer)
-            writer.on('finish', () => {
-                color.getColor("./playing.jpg").then(color => {
-                    led(color)
-                }).catch(err => console.log(err))
-            })
+    try {
+        await re.json().then(j => {
+            fetch(j.item.album.images[0].url).then(res => {
+                let writer = fs.createWriteStream("./playing.jpg")
+                res.body.pipe(writer)
+                writer.on('finish', () => {
+                    color.getColor("./playing.jpg").then(color => {
+                        led(color)
+                        fs.unlinkSync("./playing.jpg")
+                    }).catch(err => console.log(err))
+                })
+            }).catch(err => console.log(err))
         })
-    })
+    } catch(err) { 
+        console.log("not currently listening")
+        led([255, 255, 255])
+    }
 }
 getCurrent()
 
 // colors :okayge:
 
-const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => { const hex = x.toString(16); return hex.length === 1 ? '0' + hex : hex}).join('') // not stolen i swear
+const rgbToHex = rgb => '#' + rgb.map(x => { const hex = x.toString(16); return hex.length === 1 ? '0' + hex : hex}).join('') // not stolen i swear
 
 function led(color) {
-    console.log(color)
+    console.log(rgbToHex(color))
 }
